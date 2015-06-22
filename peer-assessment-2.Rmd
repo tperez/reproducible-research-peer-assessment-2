@@ -1,0 +1,113 @@
+
+# Effects of Severe Weather Events on Public Health and Economy
+
+## Synopsis
+
+The National Weather Service has collected data since 1950 to track the impact of severe weather events on the public health and economy. The last 5 years of collected data were used to determine the impact. The public health was most impacted by tornados when considering fatalities and injuries. The effect of tornados was over 800 fatalities and over 8000 injuries.The economy was impacted by floods and tornados with both causing over 80 billions dollars of damage each.
+
+
+## Download Storm Data
+
+```{r echo=TRUE, cache=TRUE}
+
+temp <- tempfile()
+
+URL <- 'https://d396qusza40orc.cloudfront.net/repdata/data/StormData.csv.bz2'
+download.file(URL, destfile=temp, method="libcurl")
+df <- read.csv(temp)
+unlink(temp)
+```
+
+
+## Data Processing
+
+```{r echo=TRUE}
+df$date <- as.Date(df$BGN_DATE, "%m/%d/%Y")
+df$posix_date <- as.POSIXlt(df$date)
+
+#df$year <- df$posix_date$year + 1900
+
+#df$month <- df$posix_date$mon + 1
+
+
+max_date <- max(df$date)
+max_date <- max(df$posix_date)
+
+min_date <- max_date
+min_date$year <- max_date$year - 5
+
+formatted_min_date <- as.character(min_date)
+formatted_max_date <- as.character(max_date)
+  
+df <- df[df$posix_date >= min_date,]
+```
+
+The last 5 years of collected data will be considered (`r formatted_min_date` till `r formatted_max_date`).
+
+## Results
+
+
+```{r echo=TRUE}
+
+by_evtype <- with(df, aggregate(cbind(FATALITIES, INJURIES) ~ EVTYPE, FUN=sum))
+
+
+top5_evtype_by_fatalities <- 
+  head(
+    by_evtype[head(order(by_evtype$FATALITIES, decreasing=TRUE), 5), ], 
+    n=5)
+
+f <- rbind(top5_evtype_by_fatalities$FATALITIES)
+colnames(f) <- top5_evtype_by_fatalities$EVTYPE
+
+
+top5_evtype_by_injuries <- 
+  head(
+    by_evtype[head(order(by_evtype$INJURIES, decreasing=TRUE), 5), ], 
+    n=5)
+
+i <- rbind(top5_evtype_by_injuries$INJURIES)
+colnames(i) <- top5_evtype_by_injuries$EVTYPE
+
+
+par(las=2)
+#par(mfrow=c(2,1))
+par(mar=c(5,11,4,2))
+    
+barplot(f, horiz=TRUE, main="Number of Fatalities By Severe Weather Events (Top 5)")
+
+barplot(i, horiz=TRUE, main="Number of Injuries By Severe Weather Events (Top 5)")
+
+```
+
+
+
+```{r echo=TRUE}
+damage <- df[df$PROPDMGEXP %in% c('m', 'M'), ]
+
+damage_by_event <- with(damage, aggregate(PROPDMG ~ EVTYPE, FUN=sum))
+
+top5_evtype_by_damage <- 
+  head(damage_by_event[order(damage_by_event$PROPDMG, decreasing=TRUE),], n=5)
+
+d <- rbind(top5_evtype_by_damage$PROPDMG)
+colnames(d) <- top5_evtype_by_damage$EVTYPE
+
+
+par(las=2)
+par(mar=c(5,11,4,2))
+barplot(d, horiz=TRUE, main="Millions of Dollars Damage By Severe Weather Events (Top 5)")
+
+
+```
+
+Note: Includes only data for damages given in millions due to the order of magnitude difference.
+
+
+
+
+## Session Information
+
+```{r echo=TRUE}
+sessionInfo()
+```
